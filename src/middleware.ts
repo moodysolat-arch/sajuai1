@@ -9,12 +9,19 @@ const PUBLIC_PREFIXES = [
 
 const SESSION_COOKIE = "sajuai_session";
 
+function authEnabled() {
+  if (process.env.AUTH_BYPASS === "1") return false;
+  return Boolean(
+    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID &&
+      process.env.NEXT_PUBLIC_FIREBASE_API_KEY &&
+      process.env.SESSION_SECRET,
+  );
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Firebase 미설정 로컬 개발: AUTH_BYPASS 또는 Admin 미구성 시 게이트 생략
-  // (엣지에서는 Admin SDK를 쓰지 않으므로 쿠키 유무만 검사; bypass는 env로)
-  if (process.env.AUTH_BYPASS === "1") {
+  if (!authEnabled()) {
     return NextResponse.next();
   }
 
@@ -23,15 +30,9 @@ export function middleware(request: NextRequest) {
   );
   if (isPublic) return NextResponse.next();
 
-  // 정적 파일
   if (pathname.includes(".")) return NextResponse.next();
 
   const hasSession = Boolean(request.cookies.get(SESSION_COOKIE)?.value);
-
-  // Firebase Admin이 없으면 미들웨어에서 강제하지 않음 (서버 페이지가 바이패스)
-  if (!process.env.FIREBASE_PROJECT_ID) {
-    return NextResponse.next();
-  }
 
   if (!hasSession && !pathname.startsWith("/login")) {
     const url = request.nextUrl.clone();

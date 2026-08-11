@@ -7,6 +7,7 @@ import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { LogoutButton } from "@/components/auth/logout-button";
+import { isFirebaseClientConfigured } from "@/lib/firebase/client";
 import { DemoResetButton } from "@/components/layout/demo-reset-button";
 import { MaskProvider } from "@/components/layout/mask-context";
 import { MaskToggle } from "@/components/layout/mask-toggle";
@@ -154,7 +155,7 @@ export function AppShell({
                       ) : null}
                       <MaskToggle />
                       <DemoResetButton />
-                      <LogoutButton />
+                      {isFirebaseClientConfigured() ? <LogoutButton /> : null}
                     </div>
                   </div>
                   <p className="border-t border-border px-4 py-1.5 text-[11px] text-ink/50 sm:hidden">

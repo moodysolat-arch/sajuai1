@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { signOut } from "firebase/auth";
 import { LogOut } from "lucide-react";
@@ -8,7 +7,6 @@ import { getClientAuth, isFirebaseClientConfigured } from "@/lib/firebase/client
 import { Button } from "@/components/ui/button";
 
 export function LogoutButton() {
-  const router = useRouter();
   const [busy, setBusy] = useState(false);
 
   async function logout() {
@@ -19,9 +17,9 @@ export function LogoutButton() {
       if (isFirebaseClientConfigured()) {
         await signOut(getClientAuth()).catch(() => undefined);
       }
-      router.replace("/login");
-      router.refresh();
-    } finally {
+      // 쿠키 삭제 반영을 위해 하드 이동 (캐시된 RSC 우회)
+      window.location.assign("/login");
+    } catch {
       setBusy(false);
     }
   }

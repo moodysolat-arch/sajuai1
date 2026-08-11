@@ -7,10 +7,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 } from "firebase/auth";
-import {
-  getClientAuth,
-  isFirebaseClientConfigured,
-} from "@/lib/firebase/client";
+import { getClientAuth, isFirebaseClientConfigured } from "@/lib/firebase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardDesc, CardTitle } from "@/components/ui/card";
 
@@ -18,6 +15,7 @@ type Mode = "login" | "signup";
 
 export function LoginForm() {
   const router = useRouter();
+  // 클라이언트 번들에 주입된 NEXT_PUBLIC_* 로 판별
   const configured = isFirebaseClientConfigured();
   const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");
@@ -75,8 +73,8 @@ export function LoginForm() {
       <Card>
         <CardTitle>Firebase 설정 필요</CardTitle>
         <CardDesc>
-          `.env.local`에 `NEXT_PUBLIC_FIREBASE_*` 와 Admin 키를 넣은 뒤 서버를
-          재시작해 주세요. 자세한 항목은 README를 참고하세요.
+          `.env.local`에 `NEXT_PUBLIC_FIREBASE_*` 와 `SESSION_SECRET`을 넣은 뒤
+          서버를 재시작해 주세요.
         </CardDesc>
       </Card>
     );

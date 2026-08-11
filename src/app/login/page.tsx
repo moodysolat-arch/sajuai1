@@ -1,19 +1,20 @@
 import { redirect } from "next/navigation";
 import { LoginForm } from "@/components/auth/login-form";
-import { isAuthBypassed } from "@/lib/auth";
-import { isFirebaseAdminConfigured } from "@/lib/firebase/config";
+import { isAuthBypassed, isAuthConfigured } from "@/lib/firebase/config";
 
 export const dynamic = "force-dynamic";
 
 export default async function LoginPage() {
-  if (isAuthBypassed() && !isFirebaseAdminConfigured()) {
-    // 로컬 개발에서 Firebase 없이 바로 앱 사용
+  // 로그인 설정이 전혀 없으면 데모 모드로 바로 앱 사용
+  if (isAuthBypassed() && !isAuthConfigured()) {
     redirect("/dashboard");
   }
 
-  const { getSessionUser } = await import("@/lib/firebase/session");
-  const user = await getSessionUser();
-  if (user) redirect("/dashboard");
+  if (isAuthConfigured()) {
+    const { getSessionUser } = await import("@/lib/firebase/session");
+    const user = await getSessionUser();
+    if (user) redirect("/dashboard");
+  }
 
   return (
     <div className="mx-auto flex min-h-[70vh] w-full max-w-md flex-col justify-center px-4 py-10">

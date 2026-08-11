@@ -1,10 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { ensureDemoDatabase } from "@/lib/db-bootstrap";
-import { isAuthBypassed } from "@/lib/firebase/config";
+import { isAuthBypassed, isAuthConfigured } from "@/lib/firebase/config";
 import type { SessionUser } from "@/lib/firebase/session";
 
 export type { SessionUser };
-export { isAuthBypassed };
+export { isAuthBypassed, isAuthConfigured };
 
 export async function getSessionUser(): Promise<SessionUser | null> {
   if (isAuthBypassed()) return null;

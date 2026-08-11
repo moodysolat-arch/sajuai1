@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { ok, fail, handleRouteError } from "@/lib/api";
 import { ensureUserProfile } from "@/lib/auth";
-import { isFirebaseAdminConfigured } from "@/lib/firebase/config";
+import { isAuthConfigured } from "@/lib/firebase/config";
 import {
   clearSessionCookie,
   createSessionCookie,
@@ -15,11 +15,11 @@ const bodySchema = z.object({
 
 export async function GET() {
   try {
-    if (!isFirebaseAdminConfigured()) {
+    if (!isAuthConfigured()) {
       return ok({
         configured: false,
         user: null,
-        message: "Firebase Admin 환경 변수가 없습니다.",
+        message: "Firebase 클라이언트/SESSION_SECRET 환경 변수가 없습니다.",
       });
     }
     const user = await getSessionUser();
@@ -31,23 +31,18 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    if (!isFirebaseAdminConfigured()) {
+    if (!isAuthConfigured()) {
       return fail(
-        "FIREBASE_NOT_CONFIGURED",
-        "Firebase Admin 환경 변수를 설정해 주세요.",
+        "AUTH_NOT_CONFIGURED",
+        "Firebase 클라이언트와 SESSION_SECRET을 설정해 주세요.",
         503,
       );
     }
     const { idToken } = bodySchema.parse(await request.json());
-    const { getAdminAuth } = await import("@/lib/firebase/admin");
-    const decoded = await (await getAdminAuth()).verifyIdToken(idToken);
-    await createSessionCookie(idToken);
-    const profile = await ensureUserProfile({
-      uid: decoded.uid,
-      email: decoded.email ?? null,
-    });
+    const user = await createSessionCookie(idToken);
+    const profile = await ensureUserProfile(user);
     return ok({
-      user: { uid: decoded.uid, email: decoded.email ?? null },
+      user,
       profileId: profile.id,
       onboardingCompleted: profile.onboardingCompleted,
     });
