@@ -79,12 +79,14 @@ export function AppShell({
   maskDefault = false,
   isDemo = false,
   userEmail = null,
+  isAdmin = false,
 }: {
   children: React.ReactNode;
   needsOnboarding?: boolean;
   maskDefault?: boolean;
   isDemo?: boolean;
   userEmail?: string | null;
+  isAdmin?: boolean;
 }) {
   const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -149,7 +151,8 @@ export function AppShell({
 
                     <div className="flex shrink-0 items-center gap-1 sm:gap-2 md:ml-auto">
                       {userEmail ? (
-                        <span className="hidden max-w-[10rem] truncate text-xs text-ink/50 lg:inline">
+                        <span className="hidden max-w-[12rem] truncate text-xs text-ink/50 lg:inline">
+                          {isAdmin ? "관리자 · " : ""}
                           {userEmail}
                         </span>
                       ) : null}

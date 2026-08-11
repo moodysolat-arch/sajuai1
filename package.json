@@ -15,6 +15,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma migrate reset --force",
     "db:verify": "tsx prisma/verify-seed.ts",
+    "admin:ensure": "node scripts/ensure-admin-user.mjs",
     "postinstall": "prisma generate"
   },
   "prisma": {
