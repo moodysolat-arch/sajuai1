@@ -41,9 +41,12 @@ FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY----
 ```
 
 - 로그인: `/login` (가입/로그인)
-- 세션: HttpOnly 쿠키 `sajuai_session`
+- 세션: HttpOnly 쿠키 `sajuai_session` (`SESSION_SECRET` + Firebase ID 토큰 검증)
 - Prisma: 사용자별 `firebaseUid` / 자산 `profileId`
-- Firestore: `users/{uid}` 프로필, `users/{uid}/assets/{id}`, `users/{uid}/fortunes/{year}`
+- Firestore: Admin 키가 있을 때 `users/{uid}` 등으로 동기화 (선택)
+
+**배포 도메인 승인:** Firebase Console → Authentication → Settings → **Authorized domains**에  
+`localhost`, `sajuai1.firebaseapp.com`, **`sajuai1.vercel.app`** 가 있어야 브라우저 로그인이 됩니다.
 
 Firebase 없이 로컬만 돌릴 때: `AUTH_BYPASS=1` (데모 프로필 사용)
 

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import {
   createUserWithEmailAndPassword,
@@ -13,9 +13,14 @@ import { Card, CardDesc, CardTitle } from "@/components/ui/card";
 
 type Mode = "login" | "signup";
 
+function safeNextPath(raw: string | null) {
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return null;
+  if (raw.startsWith("/login")) return null;
+  return raw;
+}
+
 export function LoginForm() {
-  const router = useRouter();
-  // 클라이언트 번들에 주입된 NEXT_PUBLIC_* 로 판별
+  const searchParams = useSearchParams();
   const configured = isFirebaseClientConfigured();
   const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");
@@ -45,8 +50,12 @@ export function LoginForm() {
         setError(data.message ?? "세션 생성에 실패했습니다.");
         return;
       }
-      router.replace(data.onboardingCompleted ? "/dashboard" : "/onboarding");
-      router.refresh();
+      const next = safeNextPath(searchParams.get("next"));
+      const dest = data.onboardingCompleted
+        ? (next ?? "/dashboard")
+        : "/onboarding";
+      // 세션 쿠키가 RSC에 바로 반영되도록 하드 이동
+      window.location.assign(dest);
     } catch (err) {
       const code =
         err && typeof err === "object" && "code" in err
@@ -60,10 +69,17 @@ export function LoginForm() {
         setError("비밀번호는 6자 이상이어야 합니다.");
       } else if (code === "auth/invalid-email") {
         setError("이메일 형식을 확인해 주세요.");
+      } else if (code === "auth/unauthorized-domain") {
+        setError(
+          "이 도메인이 Firebase 승인 목록에 없습니다. Console → Authentication → Settings → Authorized domains에 sajuai1.vercel.app 을 추가해 주세요.",
+        );
+      } else if (code === "auth/operation-not-allowed") {
+        setError(
+          "Email/Password 로그인이 비활성화되어 있습니다. Firebase Console에서 사용 설정해 주세요.",
+        );
       } else {
         setError("로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.");
       }
-    } finally {
       setBusy(false);
     }
   }
@@ -84,7 +100,7 @@ export function LoginForm() {
     <Card>
       <CardTitle>{mode === "login" ? "이메일 로그인" : "회원가입"}</CardTitle>
       <CardDesc>
-        Firebase Authentication · 데이터는 계정별로 Prisma + Firestore에 저장됩니다.
+        Firebase Authentication · 계정별로 프로필과 운세 데이터가 저장됩니다.
       </CardDesc>
       <form onSubmit={onSubmit} className="mt-4 space-y-3">
         <label className="block text-sm">

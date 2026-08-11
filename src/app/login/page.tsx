@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { LoginForm } from "@/components/auth/login-form";
 import { isAuthBypassed, isAuthConfigured } from "@/lib/firebase/config";
@@ -22,7 +23,9 @@ export default async function LoginPage() {
       <h1 className="mt-2 font-display text-[28px] font-semibold">재물 나침반</h1>
       <p className="mt-2 text-sm text-ink/65">이메일로 로그인하고 내 데이터를 안전하게 저장하세요.</p>
       <div className="mt-6">
-        <LoginForm />
+        <Suspense fallback={<p className="text-sm text-ink/55">불러오는 중…</p>}>
+          <LoginForm />
+        </Suspense>
       </div>
     </div>
   );
