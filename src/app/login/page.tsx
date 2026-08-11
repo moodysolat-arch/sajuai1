@@ -1,8 +1,7 @@
 import { redirect } from "next/navigation";
 import { LoginForm } from "@/components/auth/login-form";
-import { getSessionUser } from "@/lib/firebase/session";
 import { isAuthBypassed } from "@/lib/auth";
-import { isFirebaseAdminConfigured } from "@/lib/firebase/admin";
+import { isFirebaseAdminConfigured } from "@/lib/firebase/config";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +11,7 @@ export default async function LoginPage() {
     redirect("/dashboard");
   }
 
+  const { getSessionUser } = await import("@/lib/firebase/session");
   const user = await getSessionUser();
   if (user) redirect("/dashboard");
 

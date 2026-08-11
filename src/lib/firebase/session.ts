@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { getAdminAuth, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
+import { isFirebaseAdminConfigured } from "@/lib/firebase/config";
 
 export const SESSION_COOKIE = "sajuai_session";
 const SESSION_DAYS = 14;
@@ -10,8 +10,9 @@ export type SessionUser = {
 };
 
 export async function createSessionCookie(idToken: string) {
+  const { getAdminAuth } = await import("@/lib/firebase/admin");
   const expiresIn = SESSION_DAYS * 24 * 60 * 60 * 1000;
-  const sessionCookie = await getAdminAuth().createSessionCookie(idToken, {
+  const sessionCookie = await (await getAdminAuth()).createSessionCookie(idToken, {
     expiresIn,
   });
   const jar = await cookies();
@@ -35,7 +36,8 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   const token = jar.get(SESSION_COOKIE)?.value;
   if (!token) return null;
   try {
-    const decoded = await getAdminAuth().verifySessionCookie(token, true);
+    const { getAdminAuth } = await import("@/lib/firebase/admin");
+    const decoded = await (await getAdminAuth()).verifySessionCookie(token, true);
     return { uid: decoded.uid, email: decoded.email ?? null };
   } catch {
     return null;

@@ -2,13 +2,12 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { ok, fail, handleRouteError } from "@/lib/api";
 import { ensureUserProfile } from "@/lib/auth";
-import { isFirebaseAdminConfigured } from "@/lib/firebase/admin";
+import { isFirebaseAdminConfigured } from "@/lib/firebase/config";
 import {
   clearSessionCookie,
   createSessionCookie,
   getSessionUser,
 } from "@/lib/firebase/session";
-import { getAdminAuth } from "@/lib/firebase/admin";
 
 const bodySchema = z.object({
   idToken: z.string().min(1),
@@ -40,7 +39,8 @@ export async function POST(request: Request) {
       );
     }
     const { idToken } = bodySchema.parse(await request.json());
-    const decoded = await getAdminAuth().verifyIdToken(idToken);
+    const { getAdminAuth } = await import("@/lib/firebase/admin");
+    const decoded = await (await getAdminAuth()).verifyIdToken(idToken);
     await createSessionCookie(idToken);
     const profile = await ensureUserProfile({
       uid: decoded.uid,

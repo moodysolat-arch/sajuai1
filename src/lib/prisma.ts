@@ -7,6 +7,11 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 export function resolveDatabaseUrl() {
+  // Vercel 서버리스: 쓰기 가능한 /tmp 사용
+  if (process.env.VERCEL || process.env.VERCEL_ENV) {
+    return `file:${path.join("/tmp", "sajuai.db")}`;
+  }
+
   const raw = process.env.DATABASE_URL ?? "file:./prisma/dev.db";
   if (!raw.startsWith("file:")) return raw;
 

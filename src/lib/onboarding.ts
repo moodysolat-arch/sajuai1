@@ -2,7 +2,6 @@ import { computeFinanceSummary } from "@/domain/metrics";
 import { classifyWealthType } from "@/domain/wealth-type";
 import { getOptionalProfile, getSessionUser } from "@/lib/auth";
 import { listAssetsForProfile } from "@/lib/assets-query";
-import { syncFortuneToFirestore, syncProfileToFirestore } from "@/lib/firestore/user-store";
 import { fortuneMetaPillar } from "@/lib/fortune-parse";
 import { toWon } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
@@ -65,6 +64,7 @@ export async function completeOnboarding(
 
   const session = await getSessionUser();
   if (session) {
+    const { syncProfileToFirestore } = await import("@/lib/firestore/user-store");
     await syncProfileToFirestore({
       uid: session.uid,
       email: session.email ?? profile.email,
@@ -113,6 +113,7 @@ export async function completeOnboarding(
   });
 
   if (session) {
+    const { syncFortuneToFirestore } = await import("@/lib/firestore/user-store");
     await syncFortuneToFirestore({
       uid: session.uid,
       year,

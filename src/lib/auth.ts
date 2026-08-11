@@ -1,20 +1,31 @@
 import { prisma } from "@/lib/prisma";
-import {
-  getSessionUser,
-  requireSessionUser,
-  type SessionUser,
-} from "@/lib/firebase/session";
-import { syncProfileToFirestore } from "@/lib/firestore/user-store";
-import { isFirebaseAdminConfigured } from "@/lib/firebase/admin";
+import { ensureDemoDatabase } from "@/lib/db-bootstrap";
+import { isAuthBypassed } from "@/lib/firebase/config";
+import type { SessionUser } from "@/lib/firebase/session";
 
-export { getSessionUser, requireSessionUser, type SessionUser };
+export type { SessionUser };
+export { isAuthBypassed };
 
-/** 개발용: Firebase 미설정 시 기존 단일 데모 프로필로 동작 */
-export function isAuthBypassed() {
-  return process.env.AUTH_BYPASS === "1" || !isFirebaseAdminConfigured();
+export async function getSessionUser(): Promise<SessionUser | null> {
+  if (isAuthBypassed()) return null;
+  const { getSessionUser: readSession } = await import("@/lib/firebase/session");
+  return readSession();
+}
+
+export async function requireSessionUser(): Promise<SessionUser> {
+  if (isAuthBypassed()) {
+    const err = new Error("UNAUTHORIZED");
+    err.name = "UnauthorizedError";
+    throw err;
+  }
+  const { requireSessionUser: requireSession } = await import(
+    "@/lib/firebase/session"
+  );
+  return requireSession();
 }
 
 export async function ensureUserProfile(user: SessionUser) {
+  await ensureDemoDatabase();
   const existing = await prisma.userProfile.findUnique({
     where: { firebaseUid: user.uid },
   });
@@ -24,6 +35,7 @@ export async function ensureUserProfile(user: SessionUser) {
         where: { id: existing.id },
         data: { email: user.email },
       });
+      const { syncProfileToFirestore } = await import("@/lib/firestore/user-store");
       await syncProfileToFirestore({
         uid: user.uid,
         email: user.email,
@@ -54,6 +66,7 @@ export async function ensureUserProfile(user: SessionUser) {
     },
   });
 
+  const { syncProfileToFirestore } = await import("@/lib/firestore/user-store");
   await syncProfileToFirestore({
     uid: user.uid,
     email: user.email,
@@ -64,9 +77,10 @@ export async function ensureUserProfile(user: SessionUser) {
 
 /**
  * 현재 로그인 사용자 프로필.
- * Firebase 미설정/AUTH_BYPASS 시 기존 데모(가장 오래된) 프로필.
+ * Firebase 미설정/AUTH_BYPASS 시 데모 프로필.
  */
 export async function getCurrentProfile() {
+  await ensureDemoDatabase();
   if (isAuthBypassed()) {
     const profile = await prisma.userProfile.findFirst({
       orderBy: { createdAt: "asc" },
@@ -76,11 +90,11 @@ export async function getCurrentProfile() {
   }
 
   const user = await requireSessionUser();
-  const profile = await ensureUserProfile(user);
-  return profile;
+  return ensureUserProfile(user);
 }
 
 export async function getOptionalProfile() {
+  await ensureDemoDatabase();
   if (isAuthBypassed()) {
     return prisma.userProfile.findFirst({ orderBy: { createdAt: "asc" } });
   }
