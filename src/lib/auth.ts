@@ -54,21 +54,25 @@ export async function ensureUserProfile(user: SessionUser) {
     where: { firebaseUid: user.uid },
   });
   if (existing) {
-    const needsAdminUnlock = admin && !existing.onboardingCompleted;
+    const needsUnlock = !existing.onboardingCompleted;
     const emailChanged = Boolean(user.email && existing.email !== user.email);
-    if (needsAdminUnlock || emailChanged) {
+    if (needsUnlock || emailChanged) {
       const updated = await prisma.userProfile.update({
         where: { id: existing.id },
         data: {
           ...(emailChanged ? { email: user.email } : {}),
-          ...(needsAdminUnlock
+          ...(needsUnlock
             ? {
                 onboardingCompleted: true,
                 isDemo: false,
-                name: existing.name || "관리자",
+                name: admin
+                  ? existing.name || "관리자"
+                  : existing.name,
                 goal:
                   existing.goal === "재무 목표를 입력해 주세요"
-                    ? "관리자 계정"
+                    ? admin
+                      ? "관리자 계정"
+                      : existing.goal
                     : existing.goal,
               }
             : {}),
@@ -94,8 +98,8 @@ export async function ensureUserProfile(user: SessionUser) {
       monthlyExpense: 2_000_000,
       preferredActivity: "LEARNING",
       investmentHorizon: "Y3_TO_7",
-      // 관리자는 온보딩 없이 바로 앱 사용 (프로덕션 SQLite 휘발성 대응)
-      onboardingCompleted: admin,
+      // 신규 계정도 바로 종합 재물운 사용 (온보딩은 설정에서 보완)
+      onboardingCompleted: true,
       isDemo: false,
       maskDefault: false,
     },

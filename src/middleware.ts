@@ -44,6 +44,15 @@ export function middleware(request: NextRequest) {
   if (hasSession && pathname === "/login") {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
+
+  // 로그인된 사용자가 온보딩에 머물면 종합 재물운으로
+  if (hasSession && pathname.startsWith("/onboarding")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/dashboard";
+    url.search = "";
     return NextResponse.redirect(url);
   }
 

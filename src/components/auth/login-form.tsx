@@ -52,10 +52,12 @@ export function LoginForm() {
         return;
       }
       const next = safeNextPath(searchParams.get("next"));
-      const dest = data.onboardingCompleted
-        ? (next ?? "/dashboard")
-        : "/onboarding";
-      // 세션 쿠키가 RSC에 바로 반영되도록 하드 이동
+      // 로그인 성공 시 항상 종합 재물운(/dashboard)으로.
+      // next=/onboarding 이면 온보딩 루프에 빠지므로 제외.
+      const dest =
+        next && next !== "/onboarding" && next !== "/"
+          ? next
+          : "/dashboard";
       window.location.assign(dest);
     } catch (err) {
       const code =
