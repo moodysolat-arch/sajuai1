@@ -4,9 +4,11 @@ import { ok, fail, handleRouteError } from "@/lib/api";
 import { ensureUserProfile } from "@/lib/auth";
 import { isAuthConfigured } from "@/lib/firebase/config";
 import {
-  clearSessionCookie,
-  createSessionCookie,
+  SESSION_COOKIE,
   getSessionUser,
+  sessionCookieOptions,
+  signSessionToken,
+  verifyFirebaseIdToken,
 } from "@/lib/firebase/session";
 
 const bodySchema = z.object({
@@ -39,22 +41,38 @@ export async function POST(request: Request) {
       );
     }
     const { idToken } = bodySchema.parse(await request.json());
-    const user = await createSessionCookie(idToken);
+    const user = await verifyFirebaseIdToken(idToken);
     const profile = await ensureUserProfile(user);
-    return ok({
+    const sessionToken = await signSessionToken(user);
+
+    const res = NextResponse.json({
       user,
       profileId: profile.id,
       onboardingCompleted: profile.onboardingCompleted,
     });
+    // Route Handler에서는 응답 객체에 쿠키를 붙여야 브라우저에 확실히 전달됨
+    res.cookies.set(SESSION_COOKIE, sessionToken, sessionCookieOptions());
+    return res;
   } catch (error) {
+    if (error instanceof Error && error.message === "INVALID_ID_TOKEN") {
+      return fail(
+        "INVALID_TOKEN",
+        "로그인 토큰이 올바르지 않습니다. 다시 로그인해 주세요.",
+        401,
+      );
+    }
     return handleRouteError(error);
   }
 }
 
 export async function DELETE() {
   try {
-    await clearSessionCookie();
-    return new NextResponse(null, { status: 204 });
+    const res = new NextResponse(null, { status: 204 });
+    res.cookies.set(SESSION_COOKIE, "", {
+      ...sessionCookieOptions(),
+      maxAge: 0,
+    });
+    return res;
   } catch (error) {
     return handleRouteError(error);
   }

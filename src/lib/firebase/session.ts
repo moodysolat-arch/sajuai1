@@ -1,12 +1,11 @@
-import { createRemoteJWKSet, jwtVerify, SignJWT } from "jose";
-import { cookies } from "next/headers";
+import { createRemoteJWKSet, jwtVerify, SignJWT, errors as JoseErrors } from "jose";
 import {
   getFirebaseProjectId,
   isAuthConfigured,
 } from "@/lib/firebase/config";
 
 export const SESSION_COOKIE = "sajuai_session";
-const SESSION_DAYS = 14;
+export const SESSION_MAX_AGE = 14 * 24 * 60 * 60;
 
 export type SessionUser = {
   uid: string;
@@ -25,57 +24,63 @@ function sessionSecret() {
   return new TextEncoder().encode(raw);
 }
 
+export function sessionCookieOptions() {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax" as const,
+    path: "/",
+    maxAge: SESSION_MAX_AGE,
+  };
+}
+
 /** Firebase ID 토큰 검증 (Admin SDK 없이 jose + Google JWKS) */
 export async function verifyFirebaseIdToken(idToken: string) {
   const projectId = getFirebaseProjectId();
   if (!projectId) throw new Error("FIREBASE_PROJECT_ID_MISSING");
 
-  const { payload } = await jwtVerify(idToken, googleJwks, {
-    issuer: `https://securetoken.google.com/${projectId}`,
-    audience: projectId,
-  });
+  try {
+    const { payload } = await jwtVerify(idToken, googleJwks, {
+      issuer: `https://securetoken.google.com/${projectId}`,
+      audience: projectId,
+    });
 
-  const uid = typeof payload.sub === "string" ? payload.sub : null;
-  if (!uid) throw new Error("INVALID_ID_TOKEN");
+    const uid = typeof payload.sub === "string" ? payload.sub : null;
+    if (!uid) throw new Error("INVALID_ID_TOKEN");
 
-  return {
-    uid,
-    email: typeof payload.email === "string" ? payload.email : null,
-  } satisfies SessionUser;
+    return {
+      uid,
+      email: typeof payload.email === "string" ? payload.email : null,
+    } satisfies SessionUser;
+  } catch (error) {
+    if (
+      error instanceof JoseErrors.JOSEError ||
+      (error instanceof Error &&
+        /JWS|JWT|claim|signature|compact/i.test(error.message))
+    ) {
+      const err = new Error("INVALID_ID_TOKEN");
+      err.name = "InvalidTokenError";
+      throw err;
+    }
+    throw error;
+  }
 }
 
-export async function createSessionCookie(idToken: string) {
-  const user = await verifyFirebaseIdToken(idToken);
-  const token = await new SignJWT({
+export async function signSessionToken(user: SessionUser) {
+  return new SignJWT({
     uid: user.uid,
     email: user.email,
   })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime(`${SESSION_DAYS}d`)
+    .setExpirationTime(`${SESSION_MAX_AGE}s`)
     .sign(sessionSecret());
-
-  const jar = await cookies();
-  jar.set(SESSION_COOKIE, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: SESSION_DAYS * 24 * 60 * 60,
-  });
-  return user;
 }
 
-export async function clearSessionCookie() {
-  const jar = await cookies();
-  jar.delete(SESSION_COOKIE);
-}
-
-export async function getSessionUser(): Promise<SessionUser | null> {
-  if (!isAuthConfigured()) return null;
-  const jar = await cookies();
-  const token = jar.get(SESSION_COOKIE)?.value;
-  if (!token) return null;
+export async function readSessionUserFromToken(
+  token: string | undefined,
+): Promise<SessionUser | null> {
+  if (!token || !isAuthConfigured()) return null;
   try {
     const { payload } = await jwtVerify(token, sessionSecret());
     const uid = typeof payload.uid === "string" ? payload.uid : null;
@@ -87,6 +92,29 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   } catch {
     return null;
   }
+}
+
+/** @deprecated prefer route handlers that set cookies on NextResponse */
+export async function createSessionCookie(idToken: string) {
+  const { cookies } = await import("next/headers");
+  const user = await verifyFirebaseIdToken(idToken);
+  const token = await signSessionToken(user);
+  const jar = await cookies();
+  jar.set(SESSION_COOKIE, token, sessionCookieOptions());
+  return user;
+}
+
+export async function clearSessionCookie() {
+  const { cookies } = await import("next/headers");
+  const jar = await cookies();
+  jar.delete(SESSION_COOKIE);
+}
+
+export async function getSessionUser(): Promise<SessionUser | null> {
+  if (!isAuthConfigured()) return null;
+  const { cookies } = await import("next/headers");
+  const jar = await cookies();
+  return readSessionUserFromToken(jar.get(SESSION_COOKIE)?.value);
 }
 
 export async function requireSessionUser(): Promise<SessionUser> {

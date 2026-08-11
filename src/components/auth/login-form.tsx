@@ -48,6 +48,7 @@ export function LoginForm() {
       const data = await res.json();
       if (!res.ok) {
         setError(data.message ?? "세션 생성에 실패했습니다.");
+        setBusy(false);
         return;
       }
       const next = safeNextPath(searchParams.get("next"));
