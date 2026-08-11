@@ -179,6 +179,22 @@ export function OnboardingWizard() {
     }
   }
 
+  async function goToLogin() {
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      await fetch("/api/auth/session", { method: "DELETE" });
+      clearDraftStorage();
+      window.location.assign("/login");
+    } catch {
+      setError("로그인 화면으로 이동하지 못했습니다.");
+      setBusy(false);
+    }
+  }
+
+  const isProd = process.env.NODE_ENV === "production";
+
   async function finish() {
     if (busy || !validateStep(3)) return;
     setBusy(true);
@@ -435,15 +451,21 @@ export function OnboardingWizard() {
         ) : null}
 
         <div className="mt-6 flex flex-wrap justify-between gap-2">
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {step > 1 ? (
               <Button type="button" variant="secondary" onClick={back} disabled={busy}>
                 뒤로
               </Button>
             ) : null}
-            <Button type="button" variant="ghost" onClick={startDemo} disabled={busy}>
-              데모로 둘러보기
-            </Button>
+            {isProd ? (
+              <Button type="button" variant="ghost" onClick={goToLogin} disabled={busy}>
+                로그인으로
+              </Button>
+            ) : (
+              <Button type="button" variant="ghost" onClick={startDemo} disabled={busy}>
+                데모로 둘러보기
+              </Button>
+            )}
           </div>
           {step < 4 ? (
             <Button type="button" onClick={next} disabled={busy}>
