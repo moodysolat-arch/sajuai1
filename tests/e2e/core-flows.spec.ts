@@ -3,11 +3,11 @@ import { test, expect } from "@playwright/test";
 test.describe.configure({ mode: "serial" });
 
 test.describe("핵심 시나리오", () => {
-  test("1. 대시보드 진입", async ({ page }) => {
+  test("1. 종합 재물운 진입", async ({ page }) => {
     await page.goto("/dashboard");
-    await expect(page.getByRole("heading", { name: "대시보드" })).toBeVisible();
-    await expect(page.getByText("총자산").first()).toBeVisible();
-    await expect(page.getByText("재무 건강").first()).toBeVisible();
+    await expect(page.getByRole("heading", { name: "종합 재물운" })).toBeVisible();
+    await expect(page.getByText("올해 재물운").first()).toBeVisible();
+    await expect(page.getByText("우선 실행 과제").first()).toBeVisible();
   });
 
   test("2. 자산 추가·수정·삭제", async ({ page }) => {
@@ -86,9 +86,9 @@ test.describe("핵심 시나리오", () => {
     const dialog = page.getByRole("alertdialog");
     await expect(dialog).toBeVisible();
     await dialog.getByRole("button", { name: "초기화" }).click();
-    await expect(page.getByRole("heading", { name: "대시보드" })).toBeVisible({
+    await expect(page.getByRole("heading", { name: "종합 재물운" })).toBeVisible({
       timeout: 90_000,
     });
-    await expect(page.getByText("총자산").first()).toBeVisible();
+    await expect(page.getByText("올해 재물운").first()).toBeVisible();
   });
 });

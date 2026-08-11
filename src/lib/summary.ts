@@ -11,7 +11,7 @@ export async function getDefaultProfile() {
   return getCurrentProfile();
 }
 
-/** 재물운 홈/캘린더용 페이로드. */
+/** 재물나침반 홈/캘린더용 페이로드. */
 export async function buildFortuneHomePayload(year = new Date().getFullYear()) {
   const profile = await getCurrentProfile();
   const assets = await listAssetsForProfile(profile.id);
