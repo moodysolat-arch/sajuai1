@@ -1,0 +1,186 @@
+// 재물 나침반 MVP — Prisma schema (SQLite)
+// 금액: 원 단위 정수(Int). 환율은 통화 1단위당 KRW 정수. 금리·지분율은 Decimal.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum CalendarType {
+  SOLAR
+  LUNAR
+}
+
+enum RiskLevel {
+  CONSERVATIVE
+  BALANCED
+  GROWTH
+}
+
+enum AssetType {
+  REAL_ESTATE
+  STOCK
+  CASH
+  BUSINESS
+  OTHER
+}
+
+enum ActionStatus {
+  TODO
+  DONE
+  SNOOZED
+}
+
+enum ActionSource {
+  FINANCE
+  FORTUNE
+  MIXED
+}
+
+model UserProfile {
+  id                  String            @id @default(cuid())
+  /// Firebase Auth UID (이메일 로그인 사용자)
+  firebaseUid         String?           @unique
+  email               String?
+  name                String
+  calendarType        CalendarType      @default(SOLAR)
+  birthDate           String
+  birthTime           String?
+  timezone            String            @default("Asia/Seoul")
+  riskLevel           RiskLevel         @default(BALANCED)
+  goal                String
+  /// 월 생활비 (원)
+  monthlyExpense      Int               @default(0)
+  /// 선호 활동: LEARNING | SAVING | INVESTING | BUSINESS_BUILD
+  preferredActivity   String            @default("LEARNING")
+  /// 투자 기간: UNDER_3Y | Y3_TO_7 | OVER_7Y
+  investmentHorizon   String            @default("Y3_TO_7")
+  onboardingCompleted Boolean           @default(false)
+  isDemo              Boolean           @default(false)
+  /// 금액 숨김 기본값
+  maskDefault         Boolean           @default(false)
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  fortunes            FortuneSnapshot[]
+  actions             ActionTask[]
+  assets              Asset[]
+}
+
+model Asset {
+  id                    String              @id @default(cuid())
+  profileId             String
+  profile               UserProfile         @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  type                  AssetType
+  name                  String
+  institutionOrLocation String?
+  currency              String              @default("KRW")
+  /// 통화 1단위 → KRW (원). KRW 자산은 1
+  fxRateToKrw           Int                 @default(1)
+  /// 평가액 (해당 통화 단위, 정수)
+  currentValue          Int                 @default(0)
+  /// 부채 (해당 통화 단위, 정수)
+  debtValue             Int                 @default(0)
+  monthlyIncome         Int                 @default(0)
+  monthlyExpense        Int                 @default(0)
+  memo                  String?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  realEstate            RealEstateDetail?
+  stock                 StockHolding?
+  cash                  CashAccount?
+  business              BusinessDetail?
+  snapshots             ValuationSnapshot[]
+
+  @@index([profileId])
+}
+
+model RealEstateDetail {
+  assetId        String  @id
+  asset          Asset   @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  address        String?
+  purchasePrice  Int?
+  loanBalance    Int?
+  interestRate   Decimal?
+  leaseType      String?
+  nextReviewDate String?
+}
+
+model StockHolding {
+  assetId      String  @id
+  asset        Asset   @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  ticker       String
+  quantity     Int
+  averagePrice Int
+  currentPrice Int
+  sector       String?
+}
+
+model CashAccount {
+  assetId         String   @id
+  asset           Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  accountType     String
+  interestRate    Decimal?
+  maturityDate    String?
+  isEmergencyFund Boolean  @default(false)
+}
+
+model BusinessDetail {
+  assetId        String  @id
+  asset          Asset   @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  ownershipRate  Decimal?
+  valuationBasis String?
+  liquidityGrade String?
+}
+
+model ValuationSnapshot {
+  id         String   @id @default(cuid())
+  assetId    String
+  asset      Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  value      Int
+  debt       Int      @default(0)
+  capturedAt DateTime @default(now())
+
+  @@index([assetId, capturedAt])
+}
+
+model FortuneSnapshot {
+  id                String      @id @default(cuid())
+  profileId         String
+  profile           UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  year              Int
+  provider          String
+  pillarsJson       String
+  decadeCyclesJson  String
+  monthlyScoresJson String
+  disclaimer        String
+  generatedAt       DateTime    @default(now())
+
+  @@unique([profileId, year, provider])
+}
+
+model ActionTask {
+  id                  String       @id @default(cuid())
+  profileId           String
+  profile             UserProfile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  title               String
+  category            String
+  reason              String
+  /// 완료 조건 (체크리스트 문장)
+  completionCriteria  String       @default("")
+  dueDate             String?
+  status              ActionStatus @default(TODO)
+  source              ActionSource @default(FINANCE)
+  /// 추천 엔진 중복 방지 키
+  dedupeKey           String
+  memo                String?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  @@unique([profileId, dedupeKey])
+  @@index([profileId, status])
+  @@index([profileId, dueDate])
+}

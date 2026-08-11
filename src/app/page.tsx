@@ -1,69 +1,108 @@
-import Image from "next/image";
+import Link from "next/link";
+import { MonthlyFortuneChart } from "@/components/charts/monthly-fortune-chart";
+import { ActionStatusButtons } from "@/components/actions/action-status-buttons";
+import {
+  FortuneSummaryCard,
+  ThisMonthCard,
+  WealthTypeCard,
+} from "@/components/fortune/fortune-cards";
+import { GenerateFortuneButton } from "@/components/fortune/generate-button";
+import { PageHeader } from "@/components/ui/page-header";
+import { Card, CardDesc, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { buildFortuneHomePayload } from "@/lib/summary";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+export default async function HomePage() {
+  const year = new Date().getFullYear();
+  const data = await buildFortuneHomePayload(year);
+  const todoActions = data.actions.filter((a) => a.status === "TODO").slice(0, 3);
+  const hourUnknown = !data.profile.birthTime;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <div className="space-y-6">
+      <PageHeader
+        title="재물 나침반"
+        description={`${data.profile.name}님의 사주 재물운입니다. 참고용 해석이며 투자 권유·수익 보장이 아닙니다.${
+          hourUnknown ? " 출생 시각이 없어 시주는 미상으로 표시됩니다." : ""
+        }`}
+        actions={<GenerateFortuneButton year={year} />}
+      />
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <WealthTypeCard wealthType={data.wealthType} />
+        <ThisMonthCard fortune={data.fortune} />
+      </div>
+
+      <FortuneSummaryCard fortune={data.fortune} />
+
+      <div className="grid gap-4 xl:grid-cols-3">
+        <Card className="xl:col-span-1">
+          <CardTitle>참고 실행 과제</CardTitle>
+          <CardDesc>학습·점검·기록만 · 매매 지시 없음</CardDesc>
+          {todoActions.length === 0 ? (
+            <div className="mt-4">
+              <EmptyState title="열린 과제가 없습니다" />
+            </div>
+          ) : (
+            <ul className="mt-4 space-y-4">
+              {todoActions.map((action) => (
+                <li key={action.id} className="rounded-[12px] bg-muted p-3">
+                  <p className="font-medium">{action.title}</p>
+                  <p className="mt-1 text-sm leading-6 text-ink/65">{action.reason}</p>
+                  <div className="mt-3">
+                    <ActionStatusButtons id={action.id} status={action.status} />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+          <Link
+            href="/actions"
+            className="mt-4 inline-block text-sm text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/30"
           >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+            실행 과제 전체 보기
+          </Link>
+        </Card>
+
+        {data.fortune ? (
+          <Card className="xl:col-span-2">
+            <CardTitle>12개월 금전운</CardTitle>
+            <CardDesc>참고용 해석 · provider: {data.fortune.provider}</CardDesc>
+            <div className="mt-4">
+              <MonthlyFortuneChart monthly={data.fortune.monthly} />
+            </div>
+          </Card>
+        ) : (
+          <Card className="xl:col-span-2">
+            <CardTitle>12개월 금전운</CardTitle>
+            <CardDesc>운세를 생성하면 그래프가 표시됩니다.</CardDesc>
+            <div className="mt-4">
+              <EmptyState
+                title="운세 데이터 없음"
+                description="운세 새로고침을 눌러 주세요."
+              />
+            </div>
+          </Card>
+        )}
+      </div>
+
+      <p className="text-xs leading-5 text-ink/45">
+        <Link
+          href="/wealth-type"
+          className="text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/30"
+        >
+          재물 성향 자세히
+        </Link>
+        {" · "}
+        <Link
+          href="/fortune"
+          className="text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/30"
+        >
+          운세 캘린더
+        </Link>
+      </p>
     </div>
   );
 }
