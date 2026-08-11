@@ -15,7 +15,7 @@ export function WealthTypeCard({ wealthType }: { wealthType: WealthTypeResult })
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <CardTitle>재물 유형</CardTitle>
-          <CardDesc>설문 50% · 자산구성 30% · 현금흐름 20%</CardDesc>
+          <CardDesc>설문·성향 기반 참고 분류</CardDesc>
         </div>
         <DemoFortuneBadge />
       </div>

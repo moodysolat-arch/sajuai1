@@ -35,7 +35,7 @@ export default async function WealthTypePage() {
 
       <p className="text-sm text-ink/55">
         <Link href="/dashboard" className="text-primary hover:underline">
-          대시보드
+          종합 재물운
         </Link>
         {" · "}
         <Link href="/fortune" className="text-primary hover:underline">

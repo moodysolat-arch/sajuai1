@@ -13,7 +13,7 @@ export default async function DashboardPage() {
       error instanceof Error && error.message === "DEFAULT_PROFILE_MISSING";
     return (
       <ErrorState
-        title={missing ? "프로필이 없습니다" : "대시보드를 불러오지 못했습니다"}
+        title={missing ? "프로필이 없습니다" : "종합 재물운을 불러오지 못했습니다"}
         description={
           missing
             ? "데모 시드를 실행한 뒤 다시 시도해 주세요."

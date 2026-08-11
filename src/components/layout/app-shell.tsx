@@ -7,6 +7,7 @@ import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { LogoutButton } from "@/components/auth/logout-button";
+import { isFirebaseClientConfigured } from "@/lib/firebase/client";
 import { DemoResetButton } from "@/components/layout/demo-reset-button";
 import { MaskProvider } from "@/components/layout/mask-context";
 import { MaskToggle } from "@/components/layout/mask-toggle";
@@ -78,12 +79,14 @@ export function AppShell({
   maskDefault = false,
   isDemo = false,
   userEmail = null,
+  isAdmin = false,
 }: {
   children: React.ReactNode;
   needsOnboarding?: boolean;
   maskDefault?: boolean;
   isDemo?: boolean;
   userEmail?: string | null;
+  isAdmin?: boolean;
 }) {
   const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -148,13 +151,14 @@ export function AppShell({
 
                     <div className="flex shrink-0 items-center gap-1 sm:gap-2 md:ml-auto">
                       {userEmail ? (
-                        <span className="hidden max-w-[10rem] truncate text-xs text-ink/50 lg:inline">
+                        <span className="hidden max-w-[12rem] truncate text-xs text-ink/50 lg:inline">
+                          {isAdmin ? "관리자 · " : ""}
                           {userEmail}
                         </span>
                       ) : null}
                       <MaskToggle />
                       <DemoResetButton />
-                      <LogoutButton />
+                      {isFirebaseClientConfigured() ? <LogoutButton /> : null}
                     </div>
                   </div>
                   <p className="border-t border-border px-4 py-1.5 text-[11px] text-ink/50 sm:hidden">

@@ -97,14 +97,18 @@ export async function loadDashboardPayload(
   const month = new Date().getMonth() + 1;
   const thisMonth = fortune?.monthly.find((m) => m.month === month) ?? null;
 
-  await syncRecommendationsForProfile({
-    profileId: profile.id,
-    goal: profile.goal,
-    riskLevel: profile.riskLevel,
-    birthTime: profile.birthTime,
-    summary,
-    fortune,
-  });
+  try {
+    await syncRecommendationsForProfile({
+      profileId: profile.id,
+      goal: profile.goal,
+      riskLevel: profile.riskLevel,
+      birthTime: profile.birthTime,
+      summary,
+      fortune,
+    });
+  } catch (error) {
+    console.error("[dashboard] recommendation sync failed", error);
+  }
 
   const priorityActions = await prisma.actionTask.findMany({
     where: { profileId: profile.id, status: "TODO" },

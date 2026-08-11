@@ -1,10 +1,11 @@
+import { isAdminEmail } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 import { ensureDemoDatabase } from "@/lib/db-bootstrap";
-import { isAuthBypassed } from "@/lib/firebase/config";
+import { isAuthBypassed, isAuthConfigured } from "@/lib/firebase/config";
 import type { SessionUser } from "@/lib/firebase/session";
 
 export type { SessionUser };
-export { isAuthBypassed };
+export { isAuthBypassed, isAuthConfigured };
 
 export async function getSessionUser(): Promise<SessionUser | null> {
   if (isAuthBypassed()) return null;
@@ -24,23 +25,60 @@ export async function requireSessionUser(): Promise<SessionUser> {
   return requireSession();
 }
 
+async function syncProfile(uid: string, email: string | null, profile: {
+  id: string;
+  name: string;
+  calendarType: string;
+  birthDate: string;
+  birthTime: string | null;
+  timezone: string;
+  riskLevel: string;
+  goal: string;
+  monthlyExpense: number;
+  preferredActivity: string;
+  investmentHorizon: string;
+  onboardingCompleted: boolean;
+  isDemo: boolean;
+  maskDefault: boolean;
+  updatedAt: Date;
+}) {
+  const { syncProfileToFirestore } = await import("@/lib/firestore/user-store");
+  await syncProfileToFirestore({ uid, email, profile });
+}
+
 export async function ensureUserProfile(user: SessionUser) {
   await ensureDemoDatabase();
+  const admin = isAdminEmail(user.email);
+
   const existing = await prisma.userProfile.findUnique({
     where: { firebaseUid: user.uid },
   });
   if (existing) {
-    if (user.email && existing.email !== user.email) {
+    const needsUnlock = !existing.onboardingCompleted;
+    const emailChanged = Boolean(user.email && existing.email !== user.email);
+    if (needsUnlock || emailChanged) {
       const updated = await prisma.userProfile.update({
         where: { id: existing.id },
-        data: { email: user.email },
+        data: {
+          ...(emailChanged ? { email: user.email } : {}),
+          ...(needsUnlock
+            ? {
+                onboardingCompleted: true,
+                isDemo: false,
+                name: admin
+                  ? existing.name || "관리자"
+                  : existing.name,
+                goal:
+                  existing.goal === "재무 목표를 입력해 주세요"
+                    ? admin
+                      ? "관리자 계정"
+                      : existing.goal
+                    : existing.goal,
+              }
+            : {}),
+        },
       });
-      const { syncProfileToFirestore } = await import("@/lib/firestore/user-store");
-      await syncProfileToFirestore({
-        uid: user.uid,
-        email: user.email,
-        profile: updated,
-      });
+      await syncProfile(user.uid, user.email, updated);
       return updated;
     }
     return existing;
@@ -50,28 +88,24 @@ export async function ensureUserProfile(user: SessionUser) {
     data: {
       firebaseUid: user.uid,
       email: user.email,
-      name: user.email?.split("@")[0] || "새 사용자",
+      name: admin ? "관리자" : user.email?.split("@")[0] || "새 사용자",
       calendarType: "SOLAR",
       birthDate: "1990-01-01",
       birthTime: null,
       timezone: "Asia/Seoul",
       riskLevel: "BALANCED",
-      goal: "재무 목표를 입력해 주세요",
+      goal: admin ? "관리자 계정" : "재무 목표를 입력해 주세요",
       monthlyExpense: 2_000_000,
       preferredActivity: "LEARNING",
       investmentHorizon: "Y3_TO_7",
-      onboardingCompleted: false,
+      // 신규 계정도 바로 종합 재물운 사용 (온보딩은 설정에서 보완)
+      onboardingCompleted: true,
       isDemo: false,
       maskDefault: false,
     },
   });
 
-  const { syncProfileToFirestore } = await import("@/lib/firestore/user-store");
-  await syncProfileToFirestore({
-    uid: user.uid,
-    email: user.email,
-    profile,
-  });
+  await syncProfile(user.uid, user.email, profile);
   return profile;
 }
 
